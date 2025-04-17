@@ -49,7 +49,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="What's happening?"
             required
-            className="w-full min-h-[100px] resize-none border-none focus:outline-none focus:ring-0 placeholder-text-secondary text-lg"
+            className="w-full min-h-[1em] resize-none border-none focus:outline-none focus:ring-0 placeholder-text-secondary text-lg"
           />
         </div>
       </div>
