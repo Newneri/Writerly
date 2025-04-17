@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+    --color-primary: #4F46E5;
+    --color-primary-hover: #4338CA;
+    --color-secondary: #22D3EE;
+    --color-secondary-hover: #06B6D4;
+    --color-background: #F9FAFB;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #111827;
+    --color-text-secondary: #6B7280;
+    --color-border: #E5E7EB;
+    --color-danger: #EF4444;
+    --color-success: #10B981;
+    
+}
+
+html,
+body {
+
+  @media (prefers-color-scheme: light) {
+    color-scheme: light dark;
+  }
+}
+
+/*
+Primary | #4F46E5 (Indigo-600) | Buttons, links, accents
+Primary Hover | #4338CA (Indigo-700) | Hover states
+Secondary | #22D3EE (Cyan-400) | Highlights, tags
+Background | #F9FAFB (Gray-50) | Page background (light mode)
+Surface | #FFFFFF | Cards, containers
+Text Primary | #111827 (Gray-900) | Titles, main text
+Text Secondary | #6B7280 (Gray-500) | Descriptions, labels
+Border/Stroke | #E5E7EB (Gray-200) | Borders
+Danger | #EF4444 (Red-500) | Errors, alerts
+Success | #10B981 (Green-500) | Success messages
+
+*/

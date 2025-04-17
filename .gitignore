@@ -1,0 +1,52 @@
+# OS Files
+.DS_Store
+*.log
+Thumbs.db
+.tmp
+.history
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Dependencies
+node_modules/
+**/node_modules/
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+
+# Client
+/client/.react-router/
+/client/build/
+/client/dist/
+/client/.env
+/client/.env.*
+/client/coverage/
+/client/npm-debug.log*
+/client/yarn-debug.log*
+/client/yarn-error.log*
+
+# Server
+/server/dist/
+/server/build/
+/server/.env
+/server/.env.*
+/server/coverage/
+/server/logs/
+/server/*.log
+/server/npm-debug.log*
+/server/yarn-debug.log*
+/server/yarn-error.log*
+
+# Misc
+.cache/
+.env
+.env.*
+*.pem
+.vercel
+.netlify
+*.tsbuildinfo
