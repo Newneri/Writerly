@@ -84,21 +84,102 @@ pnpm dev
 pnpm dev
 ```
 
+## Database Setup
+
+### Database Schema
+
+The application uses a MySQL database with the following tables:
+
+#### Users Table
+```sql
+CREATE TABLE Users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    avatar VARCHAR(255) DEFAULT 'default-avatar.png',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+#### Posts Table
+```sql
+CREATE TABLE Posts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    content TEXT NOT NULL,
+    image_url VARCHAR(255),
+    author_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES Users(id) ON DELETE CASCADE
+);
+```
+
+### Entity Relationship Diagram
+
+```
+Users 1 ----< Posts
+```
+
+### Relationships
+- One User can have many Posts (1:N)
+- Each Post must belong to one User (N:1)
+
+### Setting up the Database
+
+1. Create a new MySQL database:
+```bash
+mysql -u root -p
+CREATE DATABASE writerly;
+USE writerly;
+```
+
+2. Create the tables using the SQL schemas above
+
+3. Configure your environment variables in `/server/.env`:
+```env
+DATABASE_URL=mysql://username:password@localhost:3306/writerly
+```
+
+4. Run the initial migration (if using a migration tool):
+```bash
+cd server
+pnpm migrate
+```
+
 ## Project Structure
 
 ```
+```
 writerly/
-├── client/                 # Frontend React application
+├── client/                    # Frontend React application
 │   ├── app/
-│   │   ├── components/    # Reusable components
-│   │   ├── hooks/        # Custom hooks
-│   │   ├── routes/       # Page components
-│   │   └── styles/       # Global styles
-│   └── public/           # Static assets
-└── server/               # Backend Node.js application
-    ├── routes/           # API routes
-    ├── middleware/       # Custom middleware
-    └── config/          # Configuration files
+│   │   ├── components/       # Reusable components
+│   │   │   ├── CreatePost.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── ImageUploader.tsx
+│   │   │   └── Posts.tsx
+│   │   ├── hooks/           # Custom hooks
+│   │   │   └── useAuth.ts
+│   │   ├── routes/          # Page components
+│   │   │   ├── home.tsx
+│   │   │   ├── login.tsx
+│   │   │   ├── register.tsx
+│   │   │   └── welcome.tsx
+│   │   ├── app.css         # Global styles
+│   │   ├── root.tsx        # Root layout component
+│   │   └── routes.ts       # Route definitions
+│   ├── public/              # Static assets
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+└── server/                   # Backend Node.js application
+    ├── server.js            # Main server file with all routes
+    ├── package.json
+    └── .env                 # Environment variables
 ```
 
 ## Contributing
