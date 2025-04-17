@@ -12,7 +12,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const { user } = useAuth();
-  console.log(user);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,7 +32,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
     }
   };
   return (
-    <form onSubmit={handleSubmit} className="w-full bg-white rounded-lg shadow-md">
+    <form onSubmit={handleSubmit} className="w-full bg-surface border-t-1 border-b-1 border-border">
       <div className="p-4">
         {/* User avatar and textarea container */}
         <div className="flex gap-4">

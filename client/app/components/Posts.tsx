@@ -73,7 +73,7 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
     }
 
     return (
-        <section className="space-y-6 w-full max-w-2xl mx-auto">
+        <section className="w-full mx-auto">
             {posts.length === 0 && (
                 <div className="text-center text-text-secondary p-4">
                     No posts available. Create one to get started!
@@ -83,7 +83,7 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
             {posts.map((post) => (
                 <article
                     key={post.id}
-                    className="bg-surface rounded-xl shadow-md overflow-hidden border border-border-stroke"
+                    className="bg-surface border-b-1 border-t-1 border-border overflow-hidden"
                 >
                     <div className="p-5">
                         <div className="flex items-center mb-4">
@@ -103,11 +103,11 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
                         <h3 className="text-text-secondary mb-4">{post.content}</h3>
 
                         {post.image_url && (
-                            <div className="relative h-64 -mx-5 mb-4">
+                            <div className="relative h-64 w-auto mx-auto mb-4">
                                 <img
                                     src={post.image_url}
                                     alt={post.image_url}
-                                    className="absolute inset-0 w-full h-full object-cover"
+                                    className="absolute inset-0 w-auto h-full object-fill "
                                 />
                             </div>
                         )}
