@@ -39,7 +39,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
           <img
             src={user?.avatar}
             alt={user?.username + " avatar"}
-            className="w-10 h-10 rounded-full flex-shrink-0"
+            className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
           />
           <textarea
             value={content}

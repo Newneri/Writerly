@@ -14,7 +14,7 @@ const db = createClient({
 });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -56,13 +56,13 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
 
     try {
         const result = await db.execute(
-            'SELECT username, first_name, last_name, email, avatar FROM Users WHERE id = ?', 
+            'SELECT username, first_name, last_name, email, avatar FROM Users WHERE id = ?',
             [req.user.userId]
         );
         const user = result.rows[0];
 
-        res.status(200).json({ 
-            isLoggedIn: true, 
+        res.status(200).json({
+            isLoggedIn: true,
             user: {
                 id: req.user.userId,
                 username: user.username,
@@ -159,7 +159,7 @@ app.post("/api/createpost", verifyToken, async (req, res) => {
     console.log("🧠 req.user:", req.user); // check the decoded JWT
     console.log("📝 req.body:", req.body); // check frontend payload
 
-    const {content, image_url } = req.body;
+    const { content, image_url } = req.body;
     const author_id = req.user?.userId; // confirm this matches your token
 
     if (!content) {
@@ -188,7 +188,7 @@ app.post("/api/createpost", verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/posts', async (req, res) => {
+app.get('/api/posts', verifyToken, async (req, res) => {
     try {
         const result = await db.execute(`
             SELECT 
@@ -197,18 +197,32 @@ app.get('/api/posts', async (req, res) => {
                 p.image_url,
                 p.created_at,
                 u.username,
-                u.avatar
+                u.first_name,
+                u.last_name,
+                u.avatar,
+                (SELECT COUNT(*) FROM Likes WHERE post_id = p.id) as likes_count,
+                (CASE 
+                    WHEN ? IS NULL THEN FALSE 
+                    ELSE (SELECT EXISTS(
+                        SELECT 1 FROM Likes 
+                        WHERE post_id = p.id AND user_id = ?
+                    ))
+                END) as is_liked
             FROM Posts p
             JOIN Users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
-        `);
+        `, [req.user?.userId || null, req.user?.userId || null]);
 
         const posts = result.rows.map(post => ({
             id: post.id,
             content: post.content,
             image_url: post.image_url,
             created_at: post.created_at,
+            likes_count: post.likes_count,
+            is_liked: post.is_liked,
             author: {
+                firstName: post.first_name,
+                lastName: post.last_name,
                 username: post.username,
                 avatar: post.avatar
             }
@@ -221,6 +235,60 @@ app.get('/api/posts', async (req, res) => {
     }
 });
 
+
+app.post('/api/posts/:postId/like', verifyToken, async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { postId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        // Check if post exists
+        const postExists = await db.execute('SELECT id FROM Posts WHERE id = ?', [postId]);
+        if (postExists.rows.length === 0) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        // Check if already liked
+        const existingLike = await db.execute(
+            'SELECT * FROM Likes WHERE user_id = ? AND post_id = ?',
+            [userId, postId]
+        );
+
+        if (existingLike.rows.length > 0) {
+            // Unlike
+            await db.execute(
+                'DELETE FROM Likes WHERE user_id = ? AND post_id = ?',
+                [userId, postId]
+            );
+        } else {
+            // Like
+            await db.execute(
+                'INSERT INTO Likes (user_id, post_id) VALUES (?, ?)',
+                [userId, postId]
+            );
+        }
+
+        // Get updated like count
+        const { rows } = await db.execute(
+            'SELECT COUNT(*) as count FROM Likes WHERE post_id = ?',
+            [postId]
+        );
+
+        console.log("🧠 Number of likes", rows[0].count ); // check the decoded JWT
+        console.log("📝 Liked ?:", (existingLike.rows.length === 0)); // check frontend payload
+        res.json({
+            likeCount: rows[0].count,
+            isLiked: existingLike.rows.length === 0 // Returns true if we just liked, false if we just unliked
+        });
+
+    } catch (error) {
+        console.error('Error handling like:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port "http://localhost:${PORT}"`);
