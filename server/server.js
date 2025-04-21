@@ -24,12 +24,6 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-app.get('/', (req, res) => {
-    res.send('Server is running');
-});
-
-// Middleware to verify JWT token
-// This middleware checks if the token is valid and sets req.user
 const verifyToken = (req, res, next) => {
     const token = req.cookies.token;
 
@@ -48,7 +42,12 @@ const verifyToken = (req, res, next) => {
     });
 };
 
+app.get('/', (req, res) => {
+    res.send('Server is running');
+});
 
+
+// Middleware to check if user is logged in
 app.get('/api/auth/check', verifyToken, async (req, res) => {
     if (!req.user) {
         return res.status(200).json({ isLoggedIn: false });
@@ -145,7 +144,7 @@ app.post('/api/login', verifyToken, async (req, res) => {
 });
 
 // Logout
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -154,11 +153,11 @@ app.post('/api/auth/logout', (req, res) => {
     res.status(200).json({ message: 'Logged out' });
 });
 
-
+// Create a new post
 app.post("/api/createpost", verifyToken, async (req, res) => {
-    console.log("🧠 req.user:", req.user); // check the decoded JWT
-    console.log("📝 req.body:", req.body); // check frontend payload
-
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
     const { content, image_url } = req.body;
     const author_id = req.user?.userId; // confirm this matches your token
 
@@ -188,6 +187,7 @@ app.post("/api/createpost", verifyToken, async (req, res) => {
     }
 });
 
+// Fetch all posts
 app.get('/api/posts', verifyToken, async (req, res) => {
     try {
         const result = await db.execute(`
@@ -201,6 +201,7 @@ app.get('/api/posts', verifyToken, async (req, res) => {
                 u.last_name,
                 u.avatar,
                 (SELECT COUNT(*) FROM Likes WHERE post_id = p.id) as likes_count,
+                (SELECT COUNT(*) FROM Comments WHERE post_id = p.id) as comments_count,
                 (CASE 
                     WHEN ? IS NULL THEN FALSE 
                     ELSE (SELECT EXISTS(
@@ -218,17 +219,18 @@ app.get('/api/posts', verifyToken, async (req, res) => {
             content: post.content,
             image_url: post.image_url,
             created_at: post.created_at,
-            likes_count: post.likes_count,
-            is_liked: post.is_liked,
             author: {
+                username: post.username,
                 firstName: post.first_name,
                 lastName: post.last_name,
-                username: post.username,
                 avatar: post.avatar
-            }
+            },
+            likes_count: post.likes_count,
+            comments_count: post.comments_count,
+            is_liked: Boolean(post.is_liked)
         }));
 
-        res.status(200).json(posts);
+        res.json(posts);
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ error: 'Failed to fetch posts' });
@@ -236,6 +238,7 @@ app.get('/api/posts', verifyToken, async (req, res) => {
 });
 
 
+// Get number of likes of a post and whether the user has liked it, handle like/unlike
 app.post('/api/posts/:postId/like', verifyToken, async (req, res) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -277,8 +280,6 @@ app.post('/api/posts/:postId/like', verifyToken, async (req, res) => {
             [postId]
         );
 
-        console.log("🧠 Number of likes", rows[0].count ); // check the decoded JWT
-        console.log("📝 Liked ?:", (existingLike.rows.length === 0)); // check frontend payload
         res.json({
             likeCount: rows[0].count,
             isLiked: existingLike.rows.length === 0 // Returns true if we just liked, false if we just unliked
@@ -289,6 +290,107 @@ app.post('/api/posts/:postId/like', verifyToken, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+
+// COMMENTS
+
+// Get comments for a post
+app.get('/api/posts/:postId/comments', verifyToken, async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const result = await db.execute(`
+            SELECT 
+                c.id,
+                c.content,
+                c.created_at,
+                u.id as user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.avatar
+            FROM Comments c
+            JOIN Users u ON c.user_id = u.id
+            WHERE c.post_id = ?
+            ORDER BY c.created_at DESC
+        `, [postId]);
+
+        const comments = result.rows.map(comment => ({
+            id: comment.id,
+            content: comment.content,
+            created_at: comment.created_at,
+            user: {
+                id: comment.user_id,
+                username: comment.username,
+                firstName: comment.first_name,
+                lastName: comment.last_name,
+                avatar: comment.avatar
+            }
+        }));
+
+        res.json(comments);
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Add a comment to a post
+app.post('/api/posts/:postId/comments', verifyToken, async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { postId } = req.params;
+    const { content } = req.body;
+    const userId = req.user.userId;
+
+    if (!content?.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+    }
+
+    try {
+        // Insert comment
+        await db.execute(
+            'INSERT INTO Comments (content, user_id, post_id) VALUES (?, ?, ?)',
+            [content, userId, postId]
+        );
+
+        // Fetch the inserted comment with user details
+        const result = await db.execute(`
+            SELECT 
+                c.id,
+                c.content,
+                c.created_at,
+                u.id as user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.avatar
+            FROM Comments c
+            JOIN Users u ON c.user_id = u.id
+            WHERE c.id = LAST_INSERT_ID()
+        `);
+
+        const comment = result.rows[0];
+        res.status(201).json({
+            id: comment.id,
+            content: comment.content,
+            created_at: comment.created_at,
+            user: {
+                id: comment.user_id,
+                username: comment.username,
+                firstName: comment.first_name,
+                lastName: comment.last_name,
+                avatar: comment.avatar
+            }
+        });
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on port "http://localhost:${PORT}"`);

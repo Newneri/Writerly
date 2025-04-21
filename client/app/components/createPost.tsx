@@ -21,7 +21,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
         { content, image_url: imageUrl },
         { withCredentials: true }
       );
-      alert("Post created!");
       onPostCreated?.();
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -60,7 +59,9 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
         </div>
         <button
           type="submit"
-          className="px-6 py-1 bg-primary text-white rounded-full hover:bg-primary-hover transition-colors"
+          disabled={!content.trim()}
+          className="px-6 py-1 bg-primary text-white rounded-full hover:bg-primary-hover cursor-pointer transition-colors 
+          disabled:opacity-50 disabled:hover:bg-primary disabled:cursor-default"
         >
           Post
         </button>

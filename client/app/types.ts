@@ -16,3 +16,17 @@ export interface Post {
     comments_count: number;
     is_liked: boolean;
   }
+
+export interface Comment {
+    id: number;
+    content: string;
+    created_at: string;
+    user: {
+      id: number;
+      username: string;
+      firstName: string;
+      lastName: string;
+      avatar: string;
+    };
+  }
+  
