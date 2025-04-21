@@ -22,7 +22,7 @@ export function Sidebar() {
       <div className="col-span-3 ">
         <nav className="sticky top-0 h-screen p-4 w-fit mx-auto">
           <div className="flex flex-col h-full">
-            <button className="flex items-center gap-4 rounded-full border-2 border-border text-text-primary py-2 px-4 
+            <Link to={"/dashboard"} className="flex items-center gap-4 rounded-full border-2 border-border text-text-primary py-2 px-4 
               cursor-pointer text-left relative group overflow-hidden hover:border-transparent">
               <span className="absolute top-0 left-0 w-0 h-0 border-t-2 border-l-2 border-primary rounded-tl-full transition-all duration-350 group-hover:w-[51%] group-hover:h-[51%]"></span>
               <span className="absolute top-0 right-0 w-0 h-0 border-t-2 border-r-2 border-primary rounded-tr-full transition-all duration-350 group-hover:w-[51%] group-hover:h-[51%]"></span>
@@ -41,7 +41,7 @@ export function Sidebar() {
                   @{user?.username}
                 </p>
               </div>
-            </button>
+            </Link>
 
             <button
               onClick={handleLogout}

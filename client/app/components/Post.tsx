@@ -3,18 +3,12 @@ import { useAuth } from '../hooks/useAuth';
 import { useComments } from '../hooks/useComments';
 import { useState } from 'react';
 import type { Post as PostType } from '../types';
+import {formatDate} from '../utils/formatDate';
 
 interface PostProps {
   post: PostType;
 }
 
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-EN', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    });
-}
 
 export function Post({ post }: PostProps) {
   const { user } = useAuth();

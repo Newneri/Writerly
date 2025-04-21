@@ -9,8 +9,10 @@ Writerly is a social blogging platform that allows users to share their thoughts
 ## Features
 
 - 🔐 User authentication (Email & Password)
-- 👤 User profiles
+- 👤 User profiles with dashboards
 - ✍️ Create and publish posts
+- 💭 Comment on posts
+- 👍 Like posts
 - 📸 Image upload support
 - 🌐 Responsive design
 - 🎨 Modern UI with Tailwind CSS
@@ -28,15 +30,14 @@ Writerly is a social blogging platform that allows users to share their thoughts
 - Node.js
 - Express
 - JSON Web Tokens for authentication
-- MySQL database
+- Turso (SQLite) database
 - TypeScript
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js (v16 or higher)
-- MySQL
-- npm or pnpm
+- pnpm
 
 ### Installation
 
@@ -69,13 +70,18 @@ VITE_API_URL=http://localhost:3000
 Server `.env`:
 ```env
 PORT=3000
-DATABASE_URL=your_database_url
-DATABASE_TOKEN=your_database_token
+DATABASE_URL=your_turso_database_url
+DATABASE_TOKEN=your_turso_database_token
 SECRET_KEY=your_jwt_secret
 ```
 
-4. Start the development servers
+4. Initialize the database
+```bash
+cd server
+pnpm run init-db
+```
 
+5. Start the development servers
 ```bash
 # Start the client (in client directory)
 pnpm dev
@@ -84,37 +90,52 @@ pnpm dev
 pnpm dev
 ```
 
-## Database Setup
+## Database Schema
 
-### Database Schema
+The application uses a Turso (SQLite) database with the following tables:
 
-The application uses a MySQL database with the following tables:
-
-#### Users Table
 ```sql
 CREATE TABLE Users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    avatar VARCHAR(255) DEFAULT 'default-avatar.png',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT DEFAULT 'user',
+    bio TEXT DEFAULT '',
+    avatar TEXT DEFAULT 'https://api.dicebear.com/7.x/avataaars/svg',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-```
 
-#### Posts Table
-```sql
 CREATE TABLE Posts (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     content TEXT NOT NULL,
-    image_url VARCHAR(255),
-    author_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    image_url TEXT,
+    author_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES Users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
+    UNIQUE(user_id, post_id)
+);
+
+CREATE TABLE Comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE
 );
 ```
 
@@ -122,64 +143,32 @@ CREATE TABLE Posts (
 
 ```
 Users 1 ----< Posts
-```
-
-### Relationships
-- One User can have many Posts (1:N)
-- Each Post must belong to one User (N:1)
-
-### Setting up the Database
-
-1. Create a new MySQL database:
-```bash
-mysql -u root -p
-CREATE DATABASE writerly;
-USE writerly;
-```
-
-2. Create the tables using the SQL schemas above
-
-3. Configure your environment variables in `/server/.env`:
-```env
-DATABASE_URL=mysql://username:password@localhost:3306/writerly
-```
-
-4. Run the initial migration (if using a migration tool):
-```bash
-cd server
-pnpm migrate
+Users 1 ----< Likes
+Users 1 ----< Comments
+Posts 1 ----< Likes
+Posts 1 ----< Comments
 ```
 
 ## Project Structure
 
 ```
-```
 writerly/
 ├── client/                    # Frontend React application
 │   ├── app/
 │   │   ├── components/       # Reusable components
-│   │   │   ├── CreatePost.tsx
-│   │   │   ├── Header.tsx
-│   │   │   ├── ImageUploader.tsx
-│   │   │   └── Posts.tsx
 │   │   ├── hooks/           # Custom hooks
-│   │   │   └── useAuth.ts
 │   │   ├── routes/          # Page components
-│   │   │   ├── home.tsx
-│   │   │   ├── login.tsx
-│   │   │   ├── register.tsx
-│   │   │   └── welcome.tsx
+│   │   ├── types/           # TypeScript types
+│   │   ├── utils/           # Utility functions
 │   │   ├── app.css         # Global styles
-│   │   ├── root.tsx        # Root layout component
 │   │   └── routes.ts       # Route definitions
-│   ├── public/              # Static assets
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-└── server/                   # Backend Node.js application
-    ├── server.js            # Main server file with all routes
-    ├── package.json
-    └── .env                 # Environment variables
+│   ├── public/             # Static assets
+│   └── package.json
+└── server/                  # Backend Node.js application
+    ├── db/                 # Database initialization
+    │   └── init.js        # Database schema
+    ├── server.js          # Main server file
+    └── package.json
 ```
 
 ## Contributing

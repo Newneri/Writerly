@@ -8,10 +8,12 @@ import cookieParser from 'cookie-parser';
 
 
 dotenv.config();
+
 const db = createClient({
     url: process.env.DATABASE_URL,
     authToken: process.env.DATABASE_TOKEN,
 });
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,6 +60,15 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
             'SELECT username, first_name, last_name, email, avatar FROM Users WHERE id = ?',
             [req.user.userId]
         );
+
+        // Add null check for user data
+        if (!result.rows || result.rows.length === 0) {
+            return res.status(401).json({ 
+                isLoggedIn: false,
+                error: 'User not found'
+            });
+        }
+
         const user = result.rows[0];
 
         res.status(200).json({
@@ -172,7 +183,6 @@ app.post("/api/createpost", verifyToken, async (req, res) => {
             [content, image_url || null, author_id]
         );
 
-        console.log("✅ Post inserted:", result);
         res.status(201).json({
             message: "Post created",
             post: {
@@ -190,6 +200,8 @@ app.post("/api/createpost", verifyToken, async (req, res) => {
 // Fetch all posts
 app.get('/api/posts', verifyToken, async (req, res) => {
     try {
+        const userId = req.query.userId;
+        
         const result = await db.execute(`
             SELECT 
                 p.id,
@@ -211,8 +223,13 @@ app.get('/api/posts', verifyToken, async (req, res) => {
                 END) as is_liked
             FROM Posts p
             JOIN Users u ON p.author_id = u.id
+            ${userId ? 'WHERE p.author_id = ?' : ''}
             ORDER BY p.created_at DESC
-        `, [req.user?.userId || null, req.user?.userId || null]);
+        `, [
+            req.user?.userId || null, 
+            req.user?.userId || null,
+            ...(userId ? [userId] : [])
+        ]);
 
         const posts = result.rows.map(post => ({
             id: post.id,
@@ -341,22 +358,32 @@ app.post('/api/posts/:postId/comments', verifyToken, async (req, res) => {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { postId } = req.params;
+    const postId = parseInt(req.params.postId, 10); // Convert to number
     const { content } = req.body;
-    const userId = req.user.userId;
+    const userId = parseInt(req.user.userId, 10); // Convert to number
 
     if (!content?.trim()) {
         return res.status(400).json({ error: 'Comment content is required' });
     }
 
     try {
-        // Insert comment
-        await db.execute(
-            'INSERT INTO Comments (content, user_id, post_id) VALUES (?, ?, ?)',
+        // First check if post exists
+        const postExists = await db.execute(
+            'SELECT id FROM Posts WHERE id = ?',
+            [postId]
+        );
+
+        if (postExists.rows.length === 0) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        // Then create the comment
+        const insertResult = await db.execute(
+            'INSERT INTO Comments (content, user_id, post_id, created_at) VALUES (?, ?, ?, datetime("now"))',
             [content, userId, postId]
         );
 
-        // Fetch the inserted comment with user details
+        // Get the newly created comment
         const result = await db.execute(`
             SELECT 
                 c.id,
@@ -369,10 +396,11 @@ app.post('/api/posts/:postId/comments', verifyToken, async (req, res) => {
                 u.avatar
             FROM Comments c
             JOIN Users u ON c.user_id = u.id
-            WHERE c.id = LAST_INSERT_ID()
+            WHERE c.id = last_insert_rowid()
         `);
 
         const comment = result.rows[0];
+
         res.status(201).json({
             id: comment.id,
             content: comment.content,
@@ -387,10 +415,62 @@ app.post('/api/posts/:postId/comments', verifyToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Error adding comment:', error);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ 
+            error: 'Failed to add comment',
+            details: error.message 
+        });
     }
 });
 
+// Get comments by user
+app.get('/api/user/comments', verifyToken, async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const result = await db.execute(`
+            SELECT 
+                c.id,
+                c.content,
+                c.created_at,
+                p.id as post_id,
+                p.content as post_content,
+                u.id as user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.avatar
+            FROM Comments c
+            JOIN Posts p ON c.post_id = p.id
+            JOIN Users u ON c.user_id = u.id
+            WHERE c.user_id = ?
+            ORDER BY c.created_at DESC
+        `, [req.user.userId]);
+
+        const comments = result.rows.map(comment => ({
+            id: comment.id,
+            content: comment.content,
+            created_at: comment.created_at,
+            post: {
+                id: comment.post_id,
+                content: comment.post_content
+            },
+            user: {
+                id: comment.user_id,
+                username: comment.username,
+                firstName: comment.first_name,
+                lastName: comment.last_name,
+                avatar: comment.avatar
+            }
+        }));
+
+        res.json(comments);
+    } catch (error) {
+        console.error('Error fetching user comments:', error);
+        res.status(500).json({ error: 'Failed to fetch comments' });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port "http://localhost:${PORT}"`);

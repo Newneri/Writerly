@@ -2,7 +2,7 @@ import type { Route } from "./+types/home";
 import { Sidebar } from "../components/Sidebar";
 import CreatePost from "../components/createPost";
 import { useAuth } from "../hooks/useAuth";
-import Posts  from "./Posts";
+import Posts  from "../components/Posts";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RightSidebar } from "../components/Rightsidebar";

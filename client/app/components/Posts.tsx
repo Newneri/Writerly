@@ -6,9 +6,10 @@ import React from 'react';
 
 interface PostsProps {  
     refreshTrigger: boolean;
+    userId?: number;
 }
 
-const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
+const Posts: React.FC<PostsProps> = ({ refreshTrigger, userId }) => {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +18,8 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
     const fetchPosts = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get('/api/posts', { withCredentials: true });
+        const url = userId ? `/api/posts?userId=${userId}` : '/api/posts';
+        const response = await axios.get(url, { withCredentials: true });
         setPosts(response.data);
       } catch (err) {
         setError('Failed to fetch posts');
@@ -28,7 +30,7 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
     };
 
     fetchPosts();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, userId]);
 
   if (isLoading) {
     return <div className="text-text-secondary">Loading posts...</div>;
@@ -39,7 +41,7 @@ const Posts: React.FC<PostsProps> = ({ refreshTrigger }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col">
       {posts.map((post) => (
         <Post key={post.id} post={post} />
       ))}
