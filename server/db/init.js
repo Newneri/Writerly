@@ -30,8 +30,11 @@ async function initializeDatabase() {
                 password_hash TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
                 bio TEXT DEFAULT '',
+                location TEXT DEFAULT '',
+                website TEXT DEFAULT '',
                 avatar TEXT DEFAULT 'https://api.dicebear.com/7.x/avataaars/svg',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
 

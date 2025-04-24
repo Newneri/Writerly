@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-interface User {
-    id: number;
-    username: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    avatar: string;
-}
+import type { User } from '../types';
 
 // Define public and protected routes
 const PUBLIC_ROUTES = ['/', '/login', '/register'];
-const PROTECTED_ROUTES = ['/home'];
+const PROTECTED_ROUTES = ['/home', '/profile'];
 
 export function useAuth() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -51,5 +43,10 @@ export function useAuth() {
         checkAuth();
     }, [navigate, location.pathname]);
 
-    return { isLoggedIn, user, loading };
+    const updateUser = (userData: User) => {
+        setUser(userData);
+        setIsLoggedIn(true);
+    };
+
+    return { isLoggedIn, user, loading, updateUser };
 }

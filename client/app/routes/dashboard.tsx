@@ -5,11 +5,11 @@ import Posts from '../components/Posts';
 import axios from 'axios';
 import { formatDate } from '../utils/formatDate';
 import type { Comment } from '../types';
-
+import { Profile } from '../components/Profile';
 
 export default function Dashboard() {
-    const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'posts' | 'comments'>('posts');
+    const { user, updateUser } = useAuth();
+    const [activeTab, setActiveTab] = useState<'posts' | 'comments' | 'profile'>('posts');
     const [comments, setComments] = useState<Comment[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -39,32 +39,50 @@ export default function Dashboard() {
                 <h1 className="text-2xl font-bold text-text-primary">
                     {user?.firstName}'s Dashboard
                 </h1>
+
+                <Link
+                    to="/home"
+                    className="px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-hover transition-colors">
+                    Home 
+                </Link>
             </div>
 
             <div className="flex gap-4 mb-6 border-b border-border">
                 <button
                     onClick={() => setActiveTab('posts')}
-                    className={`px-4 py-2 cursor-pointer transition-colors ${activeTab === 'posts'
+                    className={`px-4 py-2 cursor-pointer transition-colors ${
+                        activeTab === 'posts'
                             ? 'text-primary border-b-2 border-primary'
                             : 'text-text-secondary hover:text-text-primary'
-                        }`}
+                    }`}
                 >
                     My Posts
                 </button>
                 <button
                     onClick={() => setActiveTab('comments')}
-                    className={`px-4 py-2 cursor-pointer transition-colors ${activeTab === 'comments'
+                    className={`px-4 py-2 cursor-pointer transition-colors ${
+                        activeTab === 'comments'
                             ? 'text-primary border-b-2 border-primary'
                             : 'text-text-secondary hover:text-text-primary'
-                        }`}
+                    }`}
                 >
                     My Comments
+                </button>
+                <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`px-4 py-2 cursor-pointer transition-colors ${
+                        activeTab === 'profile'
+                            ? 'text-primary border-b-2 border-primary'
+                            : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                >
+                    Profile Settings
                 </button>
             </div>
 
             {activeTab === 'posts' ? (
                 <Posts refreshTrigger userId={user?.id} />
-            ) : (
+            ) : activeTab === 'comments' ? (
                 <div className="space-y-4">
                     {isLoading ? (
                         <div className="text-center text-text-secondary">Loading comments...</div>
@@ -88,7 +106,7 @@ export default function Dashboard() {
                                             </span>
                                         </div>
                                         <p className="text-text-primary mb-2">{comment.content}</p>
-                                        <Link
+                                        <Link 
                                             to={`/post/${comment.post.id}`}
                                             className="text-sm text-text-secondary hover:text-primary transition-colors"
                                         >
@@ -104,6 +122,8 @@ export default function Dashboard() {
                         </p>
                     )}
                 </div>
+            ) : (
+                <Profile onProfileUpdate={updateUser}/>
             )}
         </div>
     );

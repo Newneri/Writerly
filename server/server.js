@@ -16,12 +16,12 @@ const db = createClient({
 
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-    origin: 'http://localhost:3001', // or your frontend URL
+    origin: 'http://localhost:3000', // or your frontend URL
     credentials: true
 }));
 app.use(cookieParser());
@@ -79,7 +79,9 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
                 firstName: user.first_name,
                 lastName: user.last_name,
                 email: user.email,
-                avatar: user.avatar
+                avatar: user.avatar,
+                bio: user.bio,
+                location: user.location,
             }
         });
     } catch (error) {
@@ -469,6 +471,71 @@ app.get('/api/user/comments', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Error fetching user comments:', error);
         res.status(500).json({ error: 'Failed to fetch comments' });
+    }
+});
+
+// Add profile update endpoint
+app.put('/api/user/profile', verifyToken, async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = req.user.userId;
+    const updates = req.body;
+
+    try {
+        // Build dynamic SQL update statement
+        const validFields = ['firstName', 'lastName', 'bio', 'location', 'website', 'avatar'];
+        const updateFields = Object.keys(updates)
+            .filter(key => validFields.includes(key) && updates[key] !== undefined)
+            .map(key => {
+                // Convert camelCase to snake_case for DB
+                const dbField = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+                return `${dbField} = ?`;
+            });
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+
+        const updateValues = Object.keys(updates)
+            .filter(key => validFields.includes(key) && updates[key] !== undefined)
+            .map(key => updates[key]);
+
+        const query = `
+            UPDATE Users 
+            SET ${updateFields.join(', ')},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `;
+
+        await db.execute(query, [...updateValues, userId]);
+
+        // Fetch updated user data
+        const result = await db.execute(`
+            SELECT id, username, first_name, last_name, email, bio, location, website, avatar
+            FROM Users WHERE id = ?
+        `, [userId]);
+
+        const user = result.rows[0];
+
+        res.json({
+            message: 'Profile updated successfully',
+            user: {
+                id: user.id,
+                username: user.username,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                email: user.email,
+                bio: user.bio,
+                location: user.location,
+                website: user.website,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
     }
 });
 
